@@ -2,14 +2,20 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::fmt::Debug;
 
+// Color enum for Red-Black tree nodes
 #[derive(Clone, Debug, PartialEq)]
 enum Color {
     Red,
     Black,
 }
 
+// Type alias for node links using Option and reference counting
 type Link<T> = Option<Rc<RefCell<Node<T>>>>;
 
+/**
+ * Node structure for Red-Black tree
+ * Uses Rc<RefCell<>> for interior mutability and reference counting
+ */
 #[derive(Clone, Debug)]
 struct Node<T> {
     data: T,
@@ -19,6 +25,7 @@ struct Node<T> {
     parent: Link<T>,
 }
 
+// Node implementation for comparable types
 impl<T: Ord + Debug + Clone> Node<T> {
     fn new(data: T) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Node {
@@ -30,6 +37,15 @@ impl<T: Ord + Debug + Clone> Node<T> {
         }))
     }
 }
+
+/**
+ * Red-Black Tree implementation
+ * Properties:
+ * 1. Every node is either red or black
+ * 2. Root is always black
+ * 3. No two adjacent red nodes
+ * 4. Every path from root to leaf has same number of black nodes
+ */
 
 pub struct RedBlackTree<T> {
     root: Link<T>,
@@ -48,7 +64,11 @@ impl<T: Ord + Debug + Clone + Default> RedBlackTree<T> {
 
         RedBlackTree { root: None, nil }
     }
-
+     /// Inserts a new value into the tree while maintaining Red-Black properties
+    /// Steps:
+    /// 1. Perform standard BST insertion
+    /// 2. Color new node red
+    /// 3. Fix Red-Black violations
     pub fn insert(&mut self, data: T) {
         let new_node = Node::new(data);
         new_node.borrow_mut().left = Some(self.nil.clone());
@@ -102,6 +122,11 @@ impl<T: Ord + Debug + Clone + Default> RedBlackTree<T> {
     }
     
 
+     /// Fixes Red-Black tree violations after insertion
+    /// Cases:
+    /// 1. Uncle is red -> Recolor
+    /// 2. Uncle is black (triangle) -> Rotate
+    /// 3. Uncle is black (line) -> Rotate and recolor
     fn fix_insert(&mut self, node: Rc<RefCell<Node<T>>>) {
         let mut current_node = node;
 
@@ -177,6 +202,14 @@ impl<T: Ord + Debug + Clone + Default> RedBlackTree<T> {
         }
     }
 
+    /// Performs left rotation around given node
+    /// Used for maintaining Red-Black tree properties
+    ///
+    ///     x                 y
+    ///    / \              / \
+    ///   a   y    =>     x   c
+    ///      / \         / \
+    ///     b   c       a   b
     fn left_rotate(&mut self, x: Rc<RefCell<Node<T>>>) {
         let y = x.borrow().right.clone().unwrap();
         x.borrow_mut().right = y.borrow().left.clone();
@@ -199,6 +232,14 @@ impl<T: Ord + Debug + Clone + Default> RedBlackTree<T> {
         x.borrow_mut().parent = Some(y.clone());
     }
 
+    /// Performs right rotation around given node
+    /// Used for maintaining Red-Black tree properties
+    ///
+    ///       y           x
+    ///      / \         / \
+    ///     x   c  =>   a   y
+    ///    / \             / \
+    ///   a   b           b   c
     fn right_rotate(&mut self, y: Rc<RefCell<Node<T>>>) {
         let x = y.borrow().left.clone().unwrap();
         y.borrow_mut().left = x.borrow().right.clone();
@@ -220,7 +261,8 @@ impl<T: Ord + Debug + Clone + Default> RedBlackTree<T> {
         x.borrow_mut().right = Some(y.clone());
         y.borrow_mut().parent = Some(x.clone());
     }
-
+     /// Performs in-order traversal of the tree
+    /// Visits nodes in ascending order
     pub fn inorder(&self) {
         self.inorder_helper(self.root.clone());
     }
